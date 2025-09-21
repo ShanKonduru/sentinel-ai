@@ -148,6 +148,96 @@ class PerformanceDiagnosisService:
         
         return summary, issues
     
+    def diagnose_performance_issues(
+        self,
+        agent_id: str,
+        hours: int = 24
+    ) -> List[Dict]:
+        """
+        Diagnose performance issues for an agent.
+        
+        Args:
+            agent_id: Agent ID to diagnose
+            hours: Number of hours to look back
+            
+        Returns:
+            List of performance issues as dictionaries
+        """
+        summary, issues = self.diagnose_agent_performance(agent_id, hours)
+        
+        # Convert issues to dictionary format expected by tests
+        return [{
+            'type': issue.issue_type.value,
+            'severity': issue.severity.value,
+            'description': issue.description,
+            'recommendation': issue.recommendation,
+            'detected_at': issue.detected_at
+        } for issue in issues]
+    
+    def calculate_performance_score(
+        self,
+        agent_id: str,
+        hours: int = 24
+    ) -> Dict:
+        """
+        Calculate overall performance score for an agent.
+        
+        Args:
+            agent_id: Agent ID to score
+            hours: Number of hours to analyze
+            
+        Returns:
+            Dictionary with performance score details
+        """
+        # Get recent metrics
+        end_time = datetime.now(timezone.utc)
+        start_time = end_time - timedelta(hours=hours)
+        
+        metrics = self.db.query(PerformanceMetric).filter(
+            and_(
+                PerformanceMetric.agent_id == agent_id,
+                PerformanceMetric.timestamp >= start_time,
+                PerformanceMetric.timestamp <= end_time
+            )
+        ).all()
+        
+        if not metrics:
+            return {
+                'score': 0,
+                'health_rating': 'unknown',
+                'details': {
+                    'latency_score': 0,
+                    'throughput_score': 0,
+                    'resource_score': 0,
+                    'reliability_score': 0
+                }
+            }
+        
+        # Calculate individual component scores
+        latency_score = self._calculate_latency_score(metrics)
+        throughput_score = self._calculate_throughput_score(metrics)
+        resource_score = self._calculate_resource_efficiency_score(metrics)
+        reliability_score = self._calculate_reliability_score(metrics)
+        
+        # Calculate weighted overall score
+        overall_score = (
+            latency_score * 0.3 +
+            throughput_score * 0.25 +
+            resource_score * 0.25 +
+            reliability_score * 0.2
+        )
+        
+        return {
+            'score': round(overall_score, 1),
+            'health_rating': self._score_to_health_rating(overall_score),
+            'details': {
+                'latency_score': latency_score,
+                'throughput_score': throughput_score,
+                'resource_score': resource_score,
+                'reliability_score': reliability_score
+            }
+        }
+    
     def get_performance_recommendations(
         self,
         agent_id: str,

@@ -136,6 +136,129 @@ class CostAnalysisService:
         
         return results
     
+    def analyze_costs_by_agent(
+        self,
+        start_time: datetime,
+        end_time: datetime
+    ) -> List[Tuple]:
+        """
+        Analyze costs by agent for specified time period.
+        
+        Args:
+            start_time: Start of analysis period
+            end_time: End of analysis period
+            
+        Returns:
+            List of tuples with agent cost analysis data
+        """
+        query = self.db.query(
+            AIAgent.agent_id,
+            AIAgent.name,
+            func.sum(PerformanceMetric.cost_per_request).label('total_cost'),
+            func.count(PerformanceMetric.metric_id).label('request_count'),
+            func.avg(PerformanceMetric.cost_per_request).label('avg_cost_per_request')
+        ).join(
+            PerformanceMetric, AIAgent.agent_id == PerformanceMetric.agent_id
+        ).filter(
+            and_(
+                PerformanceMetric.timestamp >= start_time,
+                PerformanceMetric.timestamp <= end_time,
+                PerformanceMetric.cost_per_request.isnot(None)
+            )
+        ).group_by(
+            AIAgent.agent_id, AIAgent.name
+        ).order_by(
+            func.sum(PerformanceMetric.cost_per_request).desc()
+        )
+        
+        results = []
+        for row in query.all():
+            results.append((
+                row.agent_id,
+                row.name,
+                row.total_cost,
+                row.request_count,
+                row.avg_cost_per_request
+            ))
+        
+        return results
+    
+    def detect_cost_spikes(
+        self,
+        agent_id: str,
+        period: 'CostPeriod',
+        spike_threshold: float = 2.0
+    ) -> List[Dict]:
+        """
+        Detect cost spikes for an agent.
+        
+        Args:
+            agent_id: Agent ID to analyze
+            period: Time period for spike detection
+            spike_threshold: Threshold multiplier for spike detection
+            
+        Returns:
+            List of detected cost spikes
+        """
+        # Calculate baseline (previous period)
+        if period == CostPeriod.DAILY:
+            current_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+            current_end = current_start + timedelta(days=1)
+            baseline_start = current_start - timedelta(days=7)
+            baseline_end = current_start
+        else:
+            # Default to hourly analysis
+            current_end = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+            current_start = current_end - timedelta(hours=1)
+            baseline_start = current_start - timedelta(hours=24)
+            baseline_end = current_start
+        
+        # Get baseline average cost
+        baseline_query = self.db.query(
+            func.avg(PerformanceMetric.cost_per_request).label('avg_cost')
+        ).filter(
+            and_(
+                PerformanceMetric.agent_id == agent_id,
+                PerformanceMetric.timestamp >= baseline_start,
+                PerformanceMetric.timestamp < baseline_end,
+                PerformanceMetric.cost_per_request.isnot(None)
+            )
+        )
+        
+        baseline_result = baseline_query.first()
+        baseline_avg = float(baseline_result.avg_cost) if baseline_result.avg_cost else 0.0
+        
+        # Get current period costs
+        current_query = self.db.query(
+            PerformanceMetric.timestamp,
+            func.sum(PerformanceMetric.cost_per_request).label('period_cost')
+        ).filter(
+            and_(
+                PerformanceMetric.agent_id == agent_id,
+                PerformanceMetric.timestamp >= current_start,
+                PerformanceMetric.timestamp < current_end,
+                PerformanceMetric.cost_per_request.isnot(None)
+            )
+        ).group_by(
+            PerformanceMetric.timestamp
+        ).order_by(
+            PerformanceMetric.timestamp
+        )
+        
+        spikes = []
+        for row in current_query.all():
+            if row.period_cost and baseline_avg > 0:
+                spike_ratio = float(row.period_cost) / baseline_avg
+                if spike_ratio >= spike_threshold:
+                    spikes.append({
+                        'timestamp': row.timestamp,
+                        'cost': float(row.period_cost),
+                        'baseline_avg': baseline_avg,
+                        'spike_ratio': spike_ratio
+                    })
+        
+        return spikes
+    
     def get_cost_alerts(
         self,
         agent_id: Optional[str] = None,

@@ -136,6 +136,66 @@ class DataAggregationService:
         
         return results
     
+    def aggregate_metrics_by_time(
+        self,
+        agent_id: str,
+        start_time: datetime,
+        end_time: datetime,
+        interval: AggregationInterval = AggregationInterval.HOUR
+    ) -> List[Dict]:
+        """
+        Aggregate metrics data for a specific agent and time range.
+        
+        Args:
+            agent_id: Agent ID to aggregate metrics for
+            start_time: Start of time range
+            end_time: End of time range
+            interval: Aggregation interval
+            
+        Returns:
+            List of aggregated metrics as dictionaries
+        """
+        # Build query for time-based aggregation
+        query = """
+            SELECT 
+                date_trunc(%s, timestamp) as time_bucket,
+                AVG(latency_ms) as avg_latency,
+                AVG(throughput_req_per_min) as avg_throughput,
+                AVG(cpu_usage_percent) as avg_cpu,
+                AVG(memory_usage_mb) as avg_memory,
+                COUNT(*) as metric_count
+            FROM performance_metrics 
+            WHERE agent_id = %s 
+                AND timestamp >= %s 
+                AND timestamp <= %s
+            GROUP BY date_trunc(%s, timestamp)
+            ORDER BY time_bucket
+        """
+        
+        result = self.db.execute(query, (
+            interval.value, agent_id, start_time, end_time, interval.value
+        ))
+        
+        # Handle both real database results and mock results
+        raw_results = result.fetchall()
+        
+        results = []
+        for row in raw_results:
+            # Handle mock data (dict) vs real data (tuple/row)
+            if isinstance(row, dict):
+                results.append(row)
+            else:
+                results.append({
+                    'time_bucket': row[0],
+                    'avg_latency': row[1],
+                    'avg_throughput': row[2],
+                    'avg_cpu': row[3],
+                    'avg_memory': row[4],
+                    'metric_count': row[5]
+                })
+        
+        return results
+    
     def get_agent_summary(
         self,
         agent_id: str,
