@@ -2,9 +2,9 @@
 Monitoring Configuration SQLAlchemy model for Sentinel AI.
 """
 from datetime import datetime
-from sqlalchemy import Column, Integer, Boolean, DateTime, CheckConstraint, ForeignKey, Index
+from sqlalchemy import Column, Integer, Boolean, DateTime, CheckConstraint, ForeignKey, Index, JSON
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from .base import BaseModel
@@ -23,7 +23,7 @@ class MonitoringConfiguration(BaseModel):
     # Configuration settings
     collection_interval_seconds = Column(Integer, nullable=False, default=60)
     retention_days = Column(Integer, nullable=False, default=90)
-    alert_thresholds = Column(JSONB, default=dict)
+    alert_thresholds = Column(JSON, default=dict)
     enabled = Column(Boolean, nullable=False, default=True)
     
     # Timestamps

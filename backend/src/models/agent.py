@@ -3,8 +3,8 @@ AI Agents SQLAlchemy model for Sentinel AI.
 """
 import enum
 from datetime import datetime
-from sqlalchemy import Column, String, Text, Enum, DateTime, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, Text, Enum, DateTime, CheckConstraint, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -35,7 +35,7 @@ class AIAgent(BaseModel):
     last_seen = Column(DateTime(timezone=True))
     
     # Agent metadata 
-    agent_metadata = Column(JSONB, default=dict)
+    agent_metadata = Column(JSON, default=dict)
     
     # Relationships
     performance_metrics = relationship(

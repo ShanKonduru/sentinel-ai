@@ -2,8 +2,8 @@
 User Sessions SQLAlchemy model for Sentinel AI.
 """
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, CheckConstraint, Index
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, DateTime, CheckConstraint, Index, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
 from .base import BaseModel
@@ -23,8 +23,8 @@ class UserSession(BaseModel):
     last_activity = Column(DateTime(timezone=True), nullable=False, default=func.current_timestamp())
     
     # User preferences and state
-    preferences = Column(JSONB, default=dict)
-    active_filters = Column(JSONB, default=dict)
+    preferences = Column(JSON, default=dict)
+    active_filters = Column(JSON, default=dict)
     
     # Constraints
     __table_args__ = (

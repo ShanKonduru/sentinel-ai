@@ -60,11 +60,13 @@ class TestModels:
         session.add(agent)
         session.commit()
         
-        # Create a metric
+        # Create a metric (use a past timestamp to avoid constraint violations)
+        from datetime import timedelta
+        past_time = datetime.now(timezone.utc) - timedelta(minutes=1)
         metric = PerformanceMetric(
             metric_id=str(uuid4()),
             agent_id=agent.agent_id,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=past_time,
             latency_ms=150.5,
             throughput_req_per_min=60.0,
             cost_per_request=0.001,
@@ -87,31 +89,28 @@ class TestModels:
         """Test creating a user session."""
         user_session = UserSession(
             session_id=str(uuid4()),
-            user_id="user123",
-            session_start=datetime.now(timezone.utc)
+            user_identifier="user123"
+            # Don't set last_activity explicitly - let it use the default
         )
         
         session.add(user_session)
         session.commit()
         
         # Verify the session was created
-        retrieved_session = session.query(UserSession).filter_by(user_id="user123").first()
+        retrieved_session = session.query(UserSession).filter_by(user_identifier="user123").first()
         assert retrieved_session is not None
-        assert retrieved_session.user_id == "user123"
-        assert retrieved_session.session_start is not None
+        assert retrieved_session.user_identifier == "user123"
+        assert retrieved_session.last_activity is not None
     
     def test_monitoring_configuration_creation(self, session):
         """Test creating a monitoring configuration."""
         config = MonitoringConfiguration(
             config_id=str(uuid4()),
-            name="Default Config",
-            description="Default monitoring configuration",
-            config_data={
-                "metrics_interval": 60,
-                "alert_thresholds": {
-                    "latency_ms": 1000,
-                    "cpu_usage_percent": 80
-                }
+            collection_interval_seconds=60,
+            retention_days=90,
+            alert_thresholds={
+                "latency_ms": 1000,
+                "cpu_usage_percent": 80
             }
         )
         
@@ -119,11 +118,11 @@ class TestModels:
         session.commit()
         
         # Verify the configuration was created
-        retrieved_config = session.query(MonitoringConfiguration).filter_by(name="Default Config").first()
+        retrieved_config = session.query(MonitoringConfiguration).filter_by(config_id=config.config_id).first()
         assert retrieved_config is not None
-        assert retrieved_config.name == "Default Config"
-        assert retrieved_config.config_data["metrics_interval"] == 60
-        assert retrieved_config.config_data["alert_thresholds"]["latency_ms"] == 1000
+        assert retrieved_config.collection_interval_seconds == 60
+        assert retrieved_config.retention_days == 90
+        assert retrieved_config.alert_thresholds["latency_ms"] == 1000
     
     def test_agent_metrics_relationship(self, session):
         """Test the relationship between agents and metrics."""
@@ -136,12 +135,14 @@ class TestModels:
         session.add(agent)
         session.commit()
         
-        # Create multiple metrics for the agent
+        # Create multiple metrics for the agent (use past timestamps)
+        from datetime import timedelta
         for i in range(3):
+            past_time = datetime.now(timezone.utc) - timedelta(minutes=i+1)
             metric = PerformanceMetric(
                 metric_id=str(uuid4()),
                 agent_id=agent.agent_id,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=past_time,
                 latency_ms=100.0 + i * 10
             )
             session.add(metric)
@@ -150,8 +151,8 @@ class TestModels:
         
         # Verify the relationship
         retrieved_agent = session.query(AIAgent).filter_by(agent_id=agent.agent_id).first()
-        assert len(retrieved_agent.metrics) == 3
+        assert len(retrieved_agent.performance_metrics) == 3
         
         # Verify metrics are ordered by timestamp descending
-        latencies = [metric.latency_ms for metric in retrieved_agent.metrics]
+        latencies = [metric.latency_ms for metric in retrieved_agent.performance_metrics]
         assert latencies == [120.0, 110.0, 100.0]  # Should be in descending order

@@ -2,8 +2,8 @@
 Performance Metrics SQLAlchemy model for Sentinel AI.
 """
 from datetime import datetime
-from sqlalchemy import Column, Float, CheckConstraint, ForeignKey, Index, DateTime
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, Float, CheckConstraint, ForeignKey, Index, DateTime, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -32,7 +32,7 @@ class PerformanceMetric(BaseModel):
     memory_usage_mb = Column(Float)
     
     # Custom metrics as JSON
-    custom_metrics = Column(JSONB, default=dict)
+    custom_metrics = Column(JSON, default=dict)
     
     # Relationships
     agent = relationship("AIAgent", back_populates="performance_metrics")
@@ -53,7 +53,7 @@ class PerformanceMetric(BaseModel):
             cpu_usage_percent IS NOT NULL OR 
             gpu_usage_percent IS NOT NULL OR 
             memory_usage_mb IS NOT NULL OR 
-            jsonb_array_length(custom_metrics::jsonb) > 0
+            json_array_length(custom_metrics) > 0
         """, name="performance_metrics_at_least_one_metric"),
         # Indexes
         Index("idx_metrics_agent_timestamp", "agent_id", "timestamp"),
