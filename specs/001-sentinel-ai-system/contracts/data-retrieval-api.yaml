@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: Sentinel AI Data Retrieval API
+  description: API for retrieving metrics data for dashboard and analysis
+  version: 1.0.0
+  contact:
+    name: Sentinel AI Team
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://data-api.sentinel-ai.com/api/v1
+    description: Production server
+
+paths:
+  /agents:
+    get:
+      summary: List all monitored AI agents
+      description: Retrieve information about all registered AI agents
+      operationId: listAgents
+      parameters:
+        - name: status
+          in: query
+          description: Filter agents by status
+          required: false
+          schema:
+            type: string
+            enum: [running, stopped, error, unknown]
+        - name: limit
+          in: query
+          description: Maximum number of agents to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          description: Number of agents to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentListResponse'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /agents/{agent_id}:
+    get:
+      summary: Get specific agent details
+      description: Retrieve detailed information about a specific agent
+      operationId: getAgent
+      parameters:
+        - name: agent_id
+          in: path
+          required: true
+          description: Unique identifier for the agent
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '404':
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /metrics:
+    get:
+      summary: Retrieve metrics data
+      description: Get historical and real-time metrics with filtering options
+      operationId: getMetrics
+      parameters:
+        - name: agent_id
+          in: query
+          description: Filter metrics for specific agent
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: start_date
+          in: query
+          description: Start date for time range filter (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: End date for time range filter (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: metric_types
+          in: query
+          description: Comma-separated list of metric types to include
+          required: false
+          schema:
+            type: string
+            example: "latency_ms,cpu_usage_percent"
+        - name: aggregation
+          in: query
+          description: Data aggregation level
+          required: false
+          schema:
+            type: string
+            enum: [raw, minute, hour, day]
+            default: raw
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1000
+      responses:
+        '200':
+          description: Metrics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /export:
+    get:
+      summary: Export metrics data
+      description: Export historical metrics data in CSV format
+      operationId: exportMetrics
+      parameters:
+        - name: agent_id
+          in: query
+          description: Agent to export data for
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: start_date
+          in: query
+          description: Start date for export (ISO 8601)
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: End date for export (ISO 8601)
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: format
+          in: query
+          description: Export format
+          required: false
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        '200':
+          description: Exported data
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+        '400':
+          description: Invalid export parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check if the data retrieval service is healthy
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  database_status:
+                    type: string
+                    example: "connected"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+components:
+  schemas:
+    Agent:
+      type: object
+      properties:
+        agent_id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          example: "GPT-4 Chat Agent"
+        description:
+          type: string
+          example: "Customer service chat agent using GPT-4"
+        status:
+          type: string
+          enum: [running, stopped, error, unknown]
+          example: "running"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-09-15T08:00:00Z"
+        last_seen:
+          type: string
+          format: date-time
+          example: "2025-09-20T10:29:45Z"
+        metadata:
+          type: object
+          additionalProperties: true
+          example:
+            model: "gpt-4"
+            version: "1.2.3"
+            deployment: "production"
+
+    AgentListResponse:
+      type: object
+      properties:
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+        total:
+          type: integer
+          description: Total number of agents (for pagination)
+          example: 25
+        limit:
+          type: integer
+          example: 50
+        offset:
+          type: integer
+          example: 0
+
+    Metric:
+      type: object
+      properties:
+        metric_id:
+          type: string
+          format: uuid
+        agent_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        latency_ms:
+          type: number
+          format: float
+          nullable: true
+        throughput_req_per_min:
+          type: number
+          format: float
+          nullable: true
+        cost_per_request:
+          type: number
+          format: float
+          nullable: true
+        cpu_usage_percent:
+          type: number
+          format: float
+          nullable: true
+        gpu_usage_percent:
+          type: number
+          format: float
+          nullable: true
+        memory_usage_mb:
+          type: number
+          format: float
+          nullable: true
+        custom_metrics:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    MetricsResponse:
+      type: object
+      properties:
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Metric'
+        total:
+          type: integer
+          description: Total number of metrics matching query
+        aggregation:
+          type: string
+          description: Applied aggregation level
+          example: "hour"
+        time_range:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code for programmatic handling

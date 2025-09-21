@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: Sentinel AI Metrics Collection API
+  description: API for collecting performance metrics from AI agents
+  version: 1.0.0
+  contact:
+    name: Sentinel AI Team
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Development server
+  - url: https://metrics-api.sentinel-ai.com/api/v1
+    description: Production server
+
+paths:
+  /metrics:
+    post:
+      summary: Submit metrics data from AI agent
+      description: Endpoint for AI agents to submit their performance metrics
+      operationId: submitMetrics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetricsSubmission'
+            examples:
+              complete_metrics:
+                summary: Complete metrics submission
+                value:
+                  agent_id: "550e8400-e29b-41d4-a716-446655440000"
+                  timestamp: "2025-09-20T10:30:00Z"
+                  latency_ms: 150.5
+                  throughput_req_per_min: 45.2
+                  cost_per_request: 0.002
+                  cpu_usage_percent: 75.3
+                  gpu_usage_percent: 82.1
+                  memory_usage_mb: 1024.5
+                  custom_metrics:
+                    model_tokens: 1500
+                    cache_hit_rate: 0.85
+      responses:
+        '201':
+          description: Metrics successfully recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid metrics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Check if the metrics collection service is healthy
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+components:
+  schemas:
+    MetricsSubmission:
+      type: object
+      required:
+        - agent_id
+        - timestamp
+      properties:
+        agent_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the AI agent
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        timestamp:
+          type: string
+          format: date-time
+          description: When the metrics were collected (ISO 8601)
+          example: "2025-09-20T10:30:00Z"
+        latency_ms:
+          type: number
+          format: float
+          minimum: 0
+          description: Response latency in milliseconds
+          example: 150.5
+        throughput_req_per_min:
+          type: number
+          format: float
+          minimum: 0
+          description: Requests processed per minute
+          example: 45.2
+        cost_per_request:
+          type: number
+          format: float
+          minimum: 0
+          description: Cost associated with the request
+          example: 0.002
+        cpu_usage_percent:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: CPU utilization percentage
+          example: 75.3
+        gpu_usage_percent:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: GPU utilization percentage
+          example: 82.1
+        memory_usage_mb:
+          type: number
+          format: float
+          minimum: 0
+          description: Memory consumption in megabytes
+          example: 1024.5
+        custom_metrics:
+          type: object
+          description: Additional custom metrics as key-value pairs
+          additionalProperties:
+            oneOf:
+              - type: number
+              - type: string
+              - type: boolean
+          example:
+            model_tokens: 1500
+            cache_hit_rate: 0.85
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Metrics recorded successfully"
+        metric_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the recorded metric
+          example: "123e4567-e89b-12d3-a456-426614174000"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: "Invalid agent_id format"
+        code:
+          type: string
+          description: Error code for programmatic handling
+          example: "VALIDATION_ERROR"

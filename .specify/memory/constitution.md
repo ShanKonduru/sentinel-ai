@@ -1,50 +1,70 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+Version change: initial template → 1.0.0
+Modified principles: 
+- Added Quality Standards (code quality, testing, performance requirements)
+- Added User Experience Consistency (simplicity, clarity, responsiveness)
+- Added Non-Negotiable Principles (modularity, open source, immutability)
+- Added Governance (enforcement and decision making)
+Added sections: Performance Standards
+Removed sections: None (template had generic placeholders)
+Templates requiring updates:
+✅ plan-template.md - constitution references already align
+✅ spec-template.md - testing focus aligns with constitution
+✅ tasks-template.md - performance testing already included
+Follow-up TODOs: None
+-->
+
+# Sentinel AI System Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Quality Standards
+**Code Quality**: All code MUST adhere to PEP 8 style guide for Python. Code MUST be well-documented with clear docstrings for all functions and classes.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**Testing**: All components MUST have a minimum of 90% test coverage. Unit tests, integration tests, and end-to-end tests are REQUIRED for each major feature.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale**: High code quality ensures maintainability, reduces bugs, and facilitates team collaboration. Comprehensive testing provides confidence in system reliability and enables safe refactoring.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. User Experience Consistency
+**Simplicity**: The dashboard UI MUST be intuitive and easy to navigate for users with varying levels of technical expertise.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+**Clarity**: Visualizations (graphs, charts) MUST be clear, well-labeled, and easy to interpret.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Responsiveness**: The dashboard UI MUST be fully responsive and function correctly on desktop and tablet devices. Mobile support is explicitly excluded from the initial release scope.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Rationale**: Consistent user experience reduces learning curve, improves adoption rates, and ensures the system serves users effectively across different skill levels and device types.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### III. Non-Negotiable Principles
+**Modularity**: The system MUST be built with a modular architecture, allowing individual components to be developed, tested, and deployed independently.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Open Source First**: All software components MUST be built using open-source technologies and libraries.
+
+**Immutability**: Data stored in the PostgreSQL database MUST be immutable. Updates to metrics MUST be handled by adding new records, not modifying existing ones.
+
+**Rationale**: Modularity enables parallel development and easier maintenance. Open source ensures transparency, reduces vendor lock-in, and leverages community support. Data immutability provides audit trails and prevents data corruption.
+
+### IV. Governance
+**Principle Enforcement**: Adherence to these principles MUST be verified during code reviews and through automated CI/CD checks.
+
+**Decision Making**: Any proposed changes to these core principles MUST be approved by the project lead and documented with clear rationale.
+
+**Rationale**: Structured governance ensures constitutional compliance and provides a clear process for necessary evolution while maintaining project integrity.
+
+## Performance Standards
+
+**Metrics Collector**: MUST have minimal resource footprint to avoid impacting the performance of monitored AI agents.
+
+**REST API Performance**: The Performance Metrics Collection REST API MUST handle at least 1,000 requests per second with average latency under 50ms.
+
+**Dashboard Performance**: Dashboard data loading time MUST be under 3 seconds on a stable network connection.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices. All code reviews and automated checks MUST verify compliance with these principles.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+Complexity that violates these principles MUST be justified with documented rationale and approved by project leadership.
+
+Amendment proposals MUST include impact analysis, migration plan, and updated version documentation.
+
+**Version**: 1.0.0 | **Ratified**: 2025-09-20 | **Last Amended**: 2025-09-20
