@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import List
 from sqlalchemy import text
-from . import engine
+from .config import get_database_manager
 
 
 logger = logging.getLogger(__name__)
@@ -20,6 +20,7 @@ class MigrationManager:
         if migrations_dir is None:
             migrations_dir = Path(__file__).parent / "migrations"
         self.migrations_dir = Path(migrations_dir)
+        self.db_manager = get_database_manager()
         
     def get_migration_files(self) -> List[Path]:
         """Get all migration files sorted by filename."""
@@ -44,7 +45,7 @@ class MigrationManager:
             # Split by semicolon and execute each statement
             statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
             
-            with engine.connect() as conn:
+            with self.db_manager.engine.connect() as conn:
                 trans = conn.begin()
                 try:
                     for statement in statements:
@@ -94,7 +95,7 @@ class MigrationManager:
         """
         
         try:
-            with engine.connect() as conn:
+            with self.db_manager.engine.connect() as conn:
                 conn.execute(text(create_table_sql))
                 conn.commit()
             logger.info("Created schema_migrations table")
@@ -114,7 +115,7 @@ class MigrationManager:
         }
         
         try:
-            with engine.connect() as conn:
+            with self.db_manager.engine.connect() as conn:
                 # Test connection
                 conn.execute(text("SELECT 1"))
                 status['connection'] = True
@@ -152,3 +153,28 @@ def check_db_status():
     """Convenience function to check database status."""
     manager = MigrationManager()
     return manager.check_database_status()
+
+
+def create_migration(name: str, content: str = None):
+    """Create a new migration file."""
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_{name}.sql"
+    
+    migrations_dir = Path(__file__).parent / "migrations"
+    migrations_dir.mkdir(exist_ok=True)
+    
+    migration_path = migrations_dir / filename
+    
+    if content is None:
+        content = f"""-- Migration: {name}
+-- Created: {datetime.datetime.now().isoformat()}
+
+-- Add your SQL statements here
+"""
+    
+    with open(migration_path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    
+    logger.info(f"Created migration file: {migration_path}")
+    return migration_path
