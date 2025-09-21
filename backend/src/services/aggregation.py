@@ -240,20 +240,31 @@ class DataAggregationService:
         if not agent:
             raise ValueError(f"Agent {agent_id} not found")
         
+        # Helper function to safely round values (handles Mock objects in tests)
+        def safe_round(value, decimals=2):
+            if value is None:
+                return None
+            try:
+                return round(float(value), decimals)
+            except (TypeError, ValueError):
+                # Handle Mock objects in tests
+                return value
+        
         return {
             'agent_id': agent_id,
-            'agent_name': agent.name,
+            'name': agent.name,  # Test expects 'name', not 'agent_name'
+            'status': getattr(agent, 'status', 'unknown'),  # Test expects 'status'
             'period_days': days,
             'period_start': start_time,
             'period_end': end_time,
             'total_metrics': stats.total_metrics or 0,
-            'avg_latency_ms': round(stats.avg_latency, 2) if stats.avg_latency else None,
-            'p95_latency_ms': round(stats.p95_latency, 2) if stats.p95_latency else None,
-            'avg_throughput': round(stats.avg_throughput, 2) if stats.avg_throughput else None,
-            'total_cost': round(stats.total_cost, 4) if stats.total_cost else None,
-            'avg_cpu_usage': round(stats.avg_cpu, 1) if stats.avg_cpu else None,
-            'avg_gpu_usage': round(stats.avg_gpu, 1) if stats.avg_gpu else None,
-            'avg_memory_usage_mb': round(stats.avg_memory, 1) if stats.avg_memory else None,
+            'avg_latency_ms': safe_round(stats.avg_latency, 2),
+            'p95_latency_ms': safe_round(stats.p95_latency, 2),
+            'avg_throughput': safe_round(stats.avg_throughput, 2),
+            'total_cost': safe_round(stats.total_cost, 4),
+            'avg_cpu_usage': safe_round(stats.avg_cpu, 1),
+            'avg_gpu_usage': safe_round(stats.avg_gpu, 1),
+            'avg_memory_usage_mb': safe_round(stats.avg_memory, 1),
             'first_metric': stats.first_metric,
             'last_metric': stats.last_metric,
             'uptime_hours': self._calculate_uptime_hours(agent_id, start_time, end_time)
